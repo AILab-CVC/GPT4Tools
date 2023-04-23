@@ -1,0 +1,6 @@
+{
+    "description": "A short template for gpt4tools.",
+    "prompt_input": "{instruction}\n### USER: {input}\n### ASSISTANT:\n",
+    "prompt_no_input": "{instruction}\n### ASSISTANT:\n",
+    "response_split": "### ASSISTANT:"    
+}

@@ -1,0 +1,117 @@
+# GPT4Tools: Teaching LLM to Use Tools via Self-instruction
+
+[Lin Song](http://linsong.info/), [Yanwei Li](https://yanwei-li.com/), [Rui Yang](https://github.com/Yangr116), Sijie Zhao, [Yixiao Ge](https://geyixiao.com/), [Ying Shan](https://scholar.google.com/citations?user=4oXBp9UAAAAJ&hl=en)
+
+GPT4Tools is a centralized system that can control multiple visual foundation models. 
+It is based on Vicuna (LLaMA), and 71K self-built instruction data.
+By analyzing the language content, GPT4Tools is capable of automatically deciding, controlling, and utilizing different visual foundation models, allowing the user to interact with images during a conversation.
+With this approach, GPT4Tools provides a seamless and efficient solution to fulfill various image-related requirements in a conversation.
+Different from previous work, we support users teach their own LLM to use tools with simple refinement via self-instruction and LoRA.
+
+<a href='https://gpt4tools.github.io'><img src='https://img.shields.io/badge/Project-Page-Green'></a>  <a href='https://huggingface.co/stevengrove/gpt4tools-vicuna-13b-lora'><img src='https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Model-blue'></a>  [![YouTube](https://badges.aleen42.com/src/youtube.svg)](https://youtu.be/Qrj94ibQIT8) [![arXiv](https://img.shields.io/badge/arXiv-Paper-<COLOR>.svg)]()
+
+## Updates
+
+* 🔥 We now release pretrained GPT4Tools models with <strong><font color="#008AD7">Vicuna-13B</font></strong> and released the dataset for <strong><font color="#008AD7">self-instruction</font></strong>. Check out the blog and demo.
+
+## Demo
+We provide some selected examples using GPT4Tools in this section. More examples can be found in our ![project page](https://gpt4tools.github.io).
+
+<div align=center>
+<img width="80%" src="demos/demo.gif"/>
+</div>
+
+  |   |   |
+:-------------------------:|:-------------------------:
+![segment](demos/demo_seg.png) |  ![detect kps](demos/demo_kps.png)
+![solve problem](demos/demo_explain.png)  |  ![style transfer](demos/demo_style.png)
+
+## Dataset
+| **Data file name** | **Size** | OneDrive| Google Drive|
+|:------------------:|:--------:| :--------: | :---------:|
+| gpt4tools_71k.json    | 229 MB   | [link](https://1drv.ms/u/s!AqPQkBZ4aeVnhRdryHC9b1NtWJpZ?e=ZHBCqd) | [link](https://drive.google.com/file/d/1JKIT-Or1of7TJuWvmrJpPoOx0cLdcWry/view?usp=share_link)|
+
+```gpt4tools_71k.json``` contains 71K instruction-following data we used for fine-tuning the GPT4Tools model. 
+
+The data collection process is illustrated below:
+
+We fed GPT-3.5 with captions from 3K images and descriptions of 22 visual tasks. This produced 66K instructions, each corresponding to a specific visual task and a visual foundation model (tool). Subsequently, we eliminated duplicate instructions and retained 41K sound instructions. To teach the model to utilize tools in a predefined manner, we followed the prompt format used in Visual ChatGPT and converted these instructions into a conversational format. Concurrently, we generated negative data without tool usage by randomly sampling 3K instructions from [`alpaca_gpt4_data`](https://github.com/Instruction-Tuning-with-GPT-4/GPT-4-LLM/blob/main/data/alpaca_gpt4_data.json) and converting them to the defined format. Using the generated 71K instructions, we finetuned the Vicuna using LoRA and got our GPT4Tools, which can automatically decide, control, and utilize distinct tools in a conversation.
+
+
+## Models
+GTP4Tools mainly contains three parts: LLM for instruction, LoRA for adaptation, and Visual Agent for provided functions.
+It is a flexible and extensible system that can be easily extended to support more tools and functions.
+For example, users can replace the existing LLM or tools with their own models, or add new tools to the system.
+The only things needed are finetuned the LoRA with the provided instruction, which teaches LLM to use the provided tools.
+
+![image](images/overview.png)
+
+### Weights
+GPT4Tools is based on the Vicuna, we release the LoRA weights of GPT4Tools to comply with the LLaMA model license. You can merge our LoRA weights with the Vicuna weights to obtain the GPT4Tools weights.
+
+Steps:
+1. Get the original LLaMA weights in the huggingface format [here](https://huggingface.co/docs/transformers/main/model_doc/llama).
+2. Using the [FastChat](https://github.com/lm-sys/FastChat/blob/main/README.md) to get Vicuna weigths by applying [the delta weights](https://huggingface.co/lmsys).
+3. Get the LoRA weights of GPT4Tools ([Hugging Face](https://huggingface.co/stevengrove/gpt4tools-vicuna-13b-lora), [OneDrive](https://1drv.ms/f/s!AqPQkBZ4aeVnhRiMoij_pxtbVqzK?e=pobgba), or [Google Drive](https://drive.google.com/drive/folders/1eWAg9eLYPg9M_eo9sLRD7MjVY7ETPNn5?usp=share_link)).
+
+### Preparation
+
+```
+git clone https://github.com/stevengrove/GPT4Tools
+cd GPT4Tools
+pip install -r requirements.txt
+```
+
+* If bitsandbytes doesn't work, [install it from source.](https://github.com/TimDettmers/bitsandbytes/blob/main/compile_from_source.md) Windows users can follow [these instructions](https://github.com/tloen/alpaca-lora/issues/17).
+
+### Inference 
+
+```
+# Advice for 1 GPU
+python gpt4tools.py \
+	--base_model <path_to_vicuna_with_tokenizer> \
+	--lora_model <path_to_lora_weights> \
+	--llm_device "cpu" \
+	--load "Text2Box_cuda:0,Segmenting_cuda:0,Inpainting_cuda:0,ImageCaptioning_cuda:0"
+```
+
+```
+# Advice for 4 GPUs
+python gpt4tools.py \
+	--base_model <path_to_vicuna_with_tokenizer> \
+	--lora_model <path_to_lora_weights> \
+	--llm_device "cuda:3" \
+	--load "Text2Box_cuda:0,Segmenting_cuda:0,Inpainting_cuda:0,ImageCaptioning_cuda:0,
+		   Text2Image_cuda:1,VisualQuestionAnswering_cuda:1,InstructPix2Pix_cuda:2,
+		   SegText2Image_cuda:2,Image2Pose_cpu,PoseText2Image_cuda:2"
+```
+### Finetuning with LoRA
+
+```
+# Training with 8 GPUs
+torchrun --nproc_per_node=8 --master_port=29005 lora_finetune.py \
+	--base_model <path_to_vicuna_with_tokenizer> \
+	--data_path <path_to_gpt4tools_71k.json> \
+	--output_dir output/gpt4tools \
+	--prompt_template_name gpt4tools \
+	--num_epochs 6 \
+	--batch_size 512 \
+	--cutoff_len 2048 \
+	--group_by_length \
+	--lora_target_modules '[q_proj,k_proj,v_proj,o_proj]' \
+	--lora_r 16 \
+	--micro_batch_size=8
+```
+
+## Acknowledgement
+* [VisualChatGPT](https://github.com/microsoft/TaskMatrix): It connects ChatGPT and a series of Visual Foundation Models to enable sending and receiving images during chatting.
+* [Vicuna](https://github.com/lm-sys/FastChat): The language ability of Vicuna is fantastic and amazing. And it is open-source!
+
+If you're using our GPT4Tools in your research or applications, please cite using this BibTeX:
+```
+@misc{gpt4tools,
+  title = {GPT4Tools: Teaching LLM to Use Tools via Self-instruction},
+  author = {Lin Song and Yanwei Li and Rui Yang and Sijie Zhao and Yixiao Ge and Ying Shan},
+  year = {2023},
+}
+```
