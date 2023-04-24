@@ -46,6 +46,17 @@ The only things needed are finetuned the LoRA with the provided instruction, whi
 
 ![image](images/overview.png)
 
+### Preparation
+
+
+```
+git clone https://github.com/stevengrove/GPT4Tools
+cd GPT4Tools
+pip install -r requirements.txt
+```
+* If bitsandbytes doesn't work, [install it from source.](https://github.com/TimDettmers/bitsandbytes/blob/main/compile_from_source.md) Windows users can follow [these instructions](https://github.com/tloen/alpaca-lora/issues/17).
+
+
 ### Weights
 GPT4Tools is based on the Vicuna, we release the LoRA weights of GPT4Tools to comply with the LLaMA model license. You can merge our LoRA weights with the Vicuna weights to obtain the GPT4Tools weights.
 
@@ -67,17 +78,6 @@ export checkpoints=${your_checkpoints_cache}
 # or
 ln -s ${your_checkpoints_path} checkpoints
 ```
-
-### Preparation
-
-
-```
-git clone https://github.com/stevengrove/GPT4Tools
-cd GPT4Tools
-pip install -r requirements.txt
-```
-* If bitsandbytes doesn't work, [install it from source.](https://github.com/TimDettmers/bitsandbytes/blob/main/compile_from_source.md) Windows users can follow [these instructions](https://github.com/tloen/alpaca-lora/issues/17).
-
 
 ### Inference 
 
