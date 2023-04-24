@@ -12,7 +12,7 @@ Different from previous work, we support users teach their own LLM to use tools 
 
 ## Updates
 
-* 🔥 We now release pretrained GPT4Tools models with <strong><font color="#008AD7">Vicuna-13B</font></strong> and released the dataset for <strong><font color="#008AD7">self-instruction</font></strong>. Check out the blog and demo.
+* 🔥 We now release pretrained **GPT4Tools** models with <strong><font color="#008AD7">Vicuna-13B</font></strong> and released the dataset for <strong><font color="#008AD7">self-instruction</font></strong>. Check out the [project page](https://gpt4tools.github.io/) and [demo](https://0e9918f43738e4ff98.gradio.live/).
 
 ## Demo
 We provide some selected examples using GPT4Tools in this section. More examples can be found in our [project page](https://gpt4tools.github.io).
@@ -27,7 +27,7 @@ We provide some selected examples using GPT4Tools in this section. More examples
 ![solve problem](demos/demo_explain.png)  |  ![style transfer](demos/demo_style.png)
 
 ## Dataset
-| **Data file name** | **Size** | OneDrive| Google Drive|
+| **Data file name** | **Size** | OneDrive| Google Driver|
 |:------------------:|:--------:| :--------: | :---------:|
 | gpt4tools_71k.json    | 229 MB   | [link](https://1drv.ms/u/s!AqPQkBZ4aeVnhRdryHC9b1NtWJpZ?e=ZHBCqd) | [link](https://drive.google.com/file/d/1JKIT-Or1of7TJuWvmrJpPoOx0cLdcWry/view?usp=share_link)|
 
@@ -46,26 +46,41 @@ The only things needed are finetuned the LoRA with the provided instruction, whi
 
 ![image](images/overview.png)
 
-### Weights
-GPT4Tools is based on the Vicuna, we release the LoRA weights of GPT4Tools to comply with the LLaMA model license. You can merge our LoRA weights with the Vicuna weights to obtain the GPT4Tools weights.
-
-Steps:
-1. Get the original LLaMA weights in the huggingface format [here](https://huggingface.co/docs/transformers/main/model_doc/llama).
-2. Using the [FastChat](https://github.com/lm-sys/FastChat/blob/main/README.md) to get Vicuna weigths by applying [the delta weights](https://huggingface.co/lmsys).
-3. Get the LoRA weights of GPT4Tools ([Hugging Face](https://huggingface.co/stevengrove/gpt4tools-vicuna-13b-lora), [OneDrive](https://1drv.ms/f/s!AqPQkBZ4aeVnhRiMoij_pxtbVqzK?e=pobgba), or [Google Drive](https://drive.google.com/drive/folders/1eWAg9eLYPg9M_eo9sLRD7MjVY7ETPNn5?usp=share_link)).
-
 ### Preparation
+
 
 ```
 git clone https://github.com/stevengrove/GPT4Tools
 cd GPT4Tools
 pip install -r requirements.txt
 ```
-
 * If bitsandbytes doesn't work, [install it from source.](https://github.com/TimDettmers/bitsandbytes/blob/main/compile_from_source.md) Windows users can follow [these instructions](https://github.com/tloen/alpaca-lora/issues/17).
 
-### Inference 
 
+### Weights
+GPT4Tools is based on the Vicuna, we release the LoRA weights of GPT4Tools to comply with the LLaMA model license. You can merge our LoRA weights with the Vicuna weights to obtain the GPT4Tools weights.
+
+Steps:
+1. Get the original LLaMA weights in the huggingface format from [here](https://huggingface.co/docs/transformers/main/model_doc/llama).
+2. Using the [FastChat](https://github.com/lm-sys/FastChat/blob/main/README.md) to get Vicuna weigths by applying [the delta weights](https://huggingface.co/lmsys), more details please check [here](https://github.com/lm-sys/FastChat#vicuna-weights).
+3. Get the LoRA weights of GPT4Tools ([HuggingFace](https://huggingface.co/stevengrove/gpt4tools-vicuna-13b-lora), [OneDrive](https://1drv.ms/f/s!AqPQkBZ4aeVnhRiMoij_pxtbVqzK?e=pobgba), or [Google Driver](https://drive.google.com/drive/folders/1eWAg9eLYPg9M_eo9sLRD7MjVY7ETPNn5?usp=share_link)).
+
+### Tools
+GPT4Tools can support 22 tools, more details please check [tools.md](docs/tools.md).
+When using tools for the first time, the weights of tools need to be downloaded. If you don't like stored them on default cache, please revise the shell environment varibles: 
+```
+export TRANSFORMERS_CACHE=${your_transformers_cache}
+export DIFFUSERS_CACHE=${your_diffusers_cache} 
+```
+For SAM (Segmenting tools) and GrundingDINO (Text2Box tools):
+```
+export checkpoints=${your_checkpoints_cache} 
+# or
+ln -s ${your_checkpoints_path} checkpoints
+```
+
+### Serving with Web GUI 
+Making a gradio interface on your own devices:
 ```
 # Advice for 1 GPU
 python gpt4tools.py \
@@ -85,6 +100,8 @@ python gpt4tools.py \
 		   Text2Image_cuda:1,VisualQuestionAnswering_cuda:1,InstructPix2Pix_cuda:2,
 		   SegText2Image_cuda:2,Image2Pose_cpu,PoseText2Image_cuda:2"
 ```
+You can customize the used tools by specifying ```{tools_name}_{devices}``` after args ```--load``` of ```gpt4tools.py```. ```tools_name``` is illustrated in [tools.md](./docs/tools.md).
+
 ### Finetuning with LoRA
 
 ```
@@ -102,6 +119,11 @@ torchrun --nproc_per_node=8 --master_port=29005 lora_finetune.py \
 	--lora_r 16 \
 	--micro_batch_size=8
 ```
+
+| Hyperparameter | Global Batch Size | Learning rate | Max length | Weight decay | LoRA attention dimension (lora_r) | LoRA scaling alpha(lora_alpha) | LoRA dropout (lora_dropout) | Modules to apply LoRA (lora_target_modules)      |
+|:--------------:|:-----------------:|:-------------:|:----------:|:------------:|:---------------------------------:|:----------:|:------------:|:-----------------------------:|
+|    GPT4Tools & Vicuna-13B   |        512        |      3e-4     |    2048    |      0.0     |                 16                |     16     |     0.05     | [q_proj,k_proj,v_proj,o_proj] |
+
 
 ## Acknowledgement
 * [VisualChatGPT](https://github.com/microsoft/TaskMatrix): It connects ChatGPT and a series of Visual Foundation Models to enable sending and receiving images during chatting.
