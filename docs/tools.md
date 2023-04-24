@@ -26,3 +26,4 @@ GPT4Tools can support 22 tools, including:
 | 22  |     ObjectSegmenting    | Segment the certain objects in the picture.                                     |
 | 23  |       ImageEditing      | Remove and object or something from the photo.                                  |
 
+More tools will be supported in the future!
