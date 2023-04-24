@@ -12,7 +12,7 @@ Different from previous work, we support users teach their own LLM to use tools 
 
 ## Updates
 
-* 🔥 We now release pretrained GPT4Tools models with <strong><font color="#008AD7">Vicuna-13B</font></strong> and released the dataset for <strong><font color="#008AD7">self-instruction</font></strong>. Check out the blog and demo.
+* 🔥 We now release pretrained **GPT4Tools** models with <strong><font color="#008AD7">Vicuna-13B</font></strong> and released the dataset for <strong><font color="#008AD7">self-instruction</font></strong>. Check out the blog and demo.
 
 ## Demo
 We provide some selected examples using GPT4Tools in this section. More examples can be found in our [project page](https://gpt4tools.github.io).
@@ -55,7 +55,7 @@ Steps:
 3. Get the LoRA weights of GPT4Tools ([HuggingFace](https://huggingface.co/stevengrove/gpt4tools-vicuna-13b-lora), [OneDrive](https://1drv.ms/f/s!AqPQkBZ4aeVnhRiMoij_pxtbVqzK?e=pobgba), or [Google Driver](https://drive.google.com/drive/folders/1eWAg9eLYPg9M_eo9sLRD7MjVY7ETPNn5?usp=share_link)).
 
 ### Tools
-GPT4Tools can support 22 tools, more details please check [tools.md](docs/tools.md)
+GPT4Tools can support 22 tools, more details please check [tools.md](docs/tools.md).
 When using tools for the first time, the weights of tools need to be downloaded. If you don't like stored them on default cache, please revise the shell environment varibles: 
 ```
 export TRANSFORMERS_CACHE=${your_transformers_cache}
@@ -116,6 +116,9 @@ torchrun --nproc_per_node=8 --master_port=29005 lora_finetune.py \
 	--micro_batch_size=8
 ```
 
+| Hyperparameter | Global Batch Size | Learning rate | Max length | Weight decay | Lora attention dimension (lora_r) | lora_alpha | lora_dropout |      lora_target_modules      |
+|:--------------:|:-----------------:|:-------------:|:----------:|:------------:|:---------------------------------:|:----------:|:------------:|:-----------------------------:|
+|    GPT4Tools   |        512        |      3e-4     |    2048    |      0.0     |                 16                |     16     |     0.05     | [q_proj,k_proj,v_proj,o_proj] |
 
 
 ## Acknowledgement
