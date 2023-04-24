@@ -38,3 +38,7 @@ git+https://github.com/huggingface/peft.git@e536616888d51b453ed354a6f1e243fecb02
 transformers>=4.28.0
 sentencepiece
 fire
+SQLAlchemy
+Flask-SQLAlchemy
+git+https://github.com/IDEA-Research/GroundingDINO.git
+git+https://github.com/facebookresearch/segment-anything.git
