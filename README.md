@@ -106,6 +106,7 @@ torchrun --nproc_per_node=8 --master_port=29005 lora_finetune.py \
 ## Acknowledgement
 * [VisualChatGPT](https://github.com/microsoft/TaskMatrix): It connects ChatGPT and a series of Visual Foundation Models to enable sending and receiving images during chatting.
 * [Vicuna](https://github.com/lm-sys/FastChat): The language ability of Vicuna is fantastic and amazing. And it is open-source!
+* [Alpaca-LoRA](https://github.com/tloen/alpaca-lora): Instruct-tune LLaMA on consumer hardware.
 
 If you're using our GPT4Tools in your research or applications, please cite using this BibTeX:
 ```
