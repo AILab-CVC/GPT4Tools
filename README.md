@@ -12,7 +12,7 @@ Different from previous work, we support users teach their own LLM to use tools 
 
 ## Updates
 
-* 🔥 We now release pretrained **GPT4Tools** models with <strong><font color="#008AD7">Vicuna-13B</font></strong> and released the dataset for <strong><font color="#008AD7">self-instruction</font></strong>. Check out the blog and demo.
+* 🔥 We now release pretrained **GPT4Tools** models with <strong><font color="#008AD7">Vicuna-13B</font></strong> and released the dataset for <strong><font color="#008AD7">self-instruction</font></strong>. Check out the [project page](https://gpt4tools.github.io/) and [demo](https://0e9918f43738e4ff98.gradio.live/).
 
 ## Demo
 We provide some selected examples using GPT4Tools in this section. More examples can be found in our [project page](https://gpt4tools.github.io).
@@ -60,9 +60,13 @@ When using tools for the first time, the weights of tools need to be downloaded.
 ```
 export TRANSFORMERS_CACHE=${your_transformers_cache}
 export DIFFUSERS_CACHE=${your_diffusers_cache} 
-export checkpoints=${your_checkpoints_cache} # for SAM (Segmenting tools) and GrundingDINO (Text2Box tools).
 ```
-
+For SAM (Segmenting tools) and GrundingDINO (Text2Box tools):
+```
+export checkpoints=${your_checkpoints_cache} 
+# or
+ln -s ${your_checkpoints_path} checkpoints
+```
 
 ### Preparation
 
