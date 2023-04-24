@@ -27,7 +27,6 @@ timm
 torchmetrics
 webdataset
 yapf
-peft==0.2.0
 appdirs
 loralib
 bitsandbytes==0.37.2
