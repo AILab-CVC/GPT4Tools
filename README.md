@@ -116,7 +116,7 @@ torchrun --nproc_per_node=8 --master_port=29005 lora_finetune.py \
 	--micro_batch_size=8
 ```
 
-| Hyperparameter | Global Batch Size | Learning rate | Max length | Weight decay | Lora attention dimension (lora_r) | lora_alpha | lora_dropout |      lora_target_modules      |
+| Hyperparameter | Global Batch Size | Learning rate | Max length | Weight decay | LoRA attention dimension (lora_r) | LoRA scaling alpha(lora_alpha) | LoRA dropout (lora_dropout) | Modules to apply LoRA (lora_target_modules)      |
 |:--------------:|:-----------------:|:-------------:|:----------:|:------------:|:---------------------------------:|:----------:|:------------:|:-----------------------------:|
 |    GPT4Tools   |        512        |      3e-4     |    2048    |      0.0     |                 16                |     16     |     0.05     | [q_proj,k_proj,v_proj,o_proj] |
 
