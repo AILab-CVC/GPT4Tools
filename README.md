@@ -79,8 +79,8 @@ export checkpoints=${your_checkpoints_cache}
 ln -s ${your_checkpoints_path} checkpoints
 ```
 
-### Inference 
-
+### Serving with Web GUI 
+Making a gradio interface on your own devices:
 ```
 # Advice for 1 GPU
 python gpt4tools.py \
