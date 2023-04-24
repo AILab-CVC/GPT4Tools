@@ -25,4 +25,12 @@ GPT4Tools can support 22 tools, including:
 |  21 |     ObjectSegmenting    | Segment the certain objects in the picture.                                    |
 |  22 |       ImageEditing      | Remove and object or something from the photo.                                 |
 
+You can customize the used tools by specifying ```{tools_name}_{devices}``` after args ```--load``` of ```gpt4tools.py```. For example, enabling ```Text2Box```, ```Segmenting```, and ```ImageCaptioning```:
+```
+python gpt4tools.py \
+	--base_model <path_to_vicuna_with_tokenizer> \
+	--lora_model <path_to_lora_weights> \
+	--llm_device "cpu" \
+	--load "Text2Box_cuda:0,Segmenting_cuda:0,ImageCaptioning_cuda:0"
+```
 More tools will be supported in the future!
