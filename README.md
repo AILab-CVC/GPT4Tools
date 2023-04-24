@@ -12,10 +12,10 @@ Different from previous work, we support users teach their own LLM to use tools 
 
 ## Updates
 
-* 🔥 We now release pretrained **GPT4Tools** models with <strong><font color="#008AD7">Vicuna-13B</font></strong> and released the dataset for <strong><font color="#008AD7">self-instruction</font></strong>. Check out the [project page](https://gpt4tools.github.io/) and [demo]( https://2717204f327bacea24.gradio.live/).
+* 🔥 We now release pretrained **GPT4Tools** models with <strong><font color="#008AD7">Vicuna-13B</font></strong> and released the dataset for <strong><font color="#008AD7">self-instruction</font></strong>. Check out the [project page](https://gpt4tools.github.io/) and [demo]( https://58088285ff20d62643.gradio.live).
 
 ## Demo
-We provide some selected examples using GPT4Tools in this section. More examples can be found in our [project page](https://gpt4tools.github.io). Feel free to try our onlin [demo](https://2717204f327bacea24.gradio.live/)!
+We provide some selected examples using GPT4Tools in this section. More examples can be found in our [project page](https://gpt4tools.github.io). Feel free to try our onlin [demo](https://58088285ff20d62643.gradio.live)!
 
 <div align=center>
 <img width="80%" src="demos/demo.gif"/>
@@ -63,7 +63,7 @@ GPT4Tools is based on the Vicuna, we release the LoRA weights of GPT4Tools to co
 Steps:
 1. Get the original LLaMA weights in the huggingface format from [here](https://huggingface.co/docs/transformers/main/model_doc/llama).
 2. Using the [FastChat](https://github.com/lm-sys/FastChat/blob/main/README.md) to get Vicuna weigths by applying [the delta weights](https://huggingface.co/lmsys), more details please check [here](https://github.com/lm-sys/FastChat#vicuna-weights).
-3. Get the LoRA weights of GPT4Tools ([HuggingFace](https://huggingface.co/stevengrove/gpt4tools-vicuna-13b-lora), [OneDrive](https://1drv.ms/f/s!AqPQkBZ4aeVnhRiMoij_pxtbVqzK?e=pobgba), or [Google Driver](https://drive.google.com/drive/folders/1eWAg9eLYPg9M_eo9sLRD7MjVY7ETPNn5?usp=share_link)).
+3. Get the LoRA weights of GPT4Tools ([HuggingFace](https://huggingface.co/stevengrove/gpt4tools-vicuna-13b-lora), [OneDrive](https://1drv.ms/f/s!AqPQkBZ4aeVnhRzM69NOXLyG8cTY?e=apmpyQ), or [Google Driver](https://drive.google.com/drive/folders/1ebUINGR0QzNL-4hoKl19-6D_5rfeWTPD?usp=share_link)).
 
 ### Tools
 GPT4Tools can support 22 tools, more details please check [tools.md](docs/tools.md).
