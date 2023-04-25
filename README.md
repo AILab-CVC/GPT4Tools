@@ -70,7 +70,7 @@ GPT4Tools can support 22 tools, more details please check [tools.md](docs/tools.
 When using tools for the first time, the weights of tools need to be downloaded. If you don't like stored them on default cache, please revise the shell environment varibles: 
 ```
 export TRANSFORMERS_CACHE=${your_transformers_cache}
-export DIFFUSERS_CACHE=${your_diffusers_cache} 
+export HUGGINGFACE_HUB_CACHE=${your_diffusers_cache}
 ```
 For SAM (Segmenting tools) and GrundingDINO (Text2Box tools):
 ```
