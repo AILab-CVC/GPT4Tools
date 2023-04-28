@@ -12,10 +12,10 @@ Different from previous work, we support users teach their own LLM to use tools 
 
 ## Updates
 
-* 🔥 We now release pretrained **GPT4Tools** models with <strong><font color="#008AD7">Vicuna-13B</font></strong> and released the dataset for <strong><font color="#008AD7">self-instruction</font></strong>. Check out the [project page](https://gpt4tools.github.io/) and [demo]( https://58088285ff20d62643.gradio.live).
+* 🔥 We now release pretrained **GPT4Tools** models with <strong><font color="#008AD7">Vicuna-13B</font></strong> and released the dataset for <strong><font color="#008AD7">self-instruction</font></strong>. Check out the [project page](https://gpt4tools.github.io/) and [demo]( https://7db8018df6b6879722.gradio.live).
 
 ## Demo
-We provide some selected examples using GPT4Tools in this section. More examples can be found in our [project page](https://gpt4tools.github.io). Feel free to try our onlin [demo](https://58088285ff20d62643.gradio.live)!
+We provide some selected examples using GPT4Tools in this section. More examples can be found in our [project page](https://gpt4tools.github.io). Feel free to try our onlin [demo](https://7db8018df6b6879722.gradio.live)!
 
 <div align=center>
 <img width="80%" src="demos/demo.gif"/>
