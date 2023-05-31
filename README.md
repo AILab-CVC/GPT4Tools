@@ -8,11 +8,12 @@ By analyzing the language content, GPT4Tools is capable of automatically decidin
 With this approach, GPT4Tools provides a seamless and efficient solution to fulfill various image-related requirements in a conversation.
 Different from previous work, we support users teach their own LLM to use tools with simple refinement via self-instruction and LoRA.
 
-<a href='https://gpt4tools.github.io'><img src='https://img.shields.io/badge/Project-Page-Green'></a>  <a href='https://huggingface.co/stevengrove/gpt4tools-vicuna-13b-lora'><img src='https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Model-blue'></a>  [![YouTube](https://badges.aleen42.com/src/youtube.svg)](https://youtu.be/Qrj94ibQIT8) [![arXiv](https://img.shields.io/badge/arXiv-Paper-<COLOR>.svg)]()
+<a href='https://gpt4tools.github.io'><img src='https://img.shields.io/badge/Project-Page-Green'></a>  <a href='https://huggingface.co/stevengrove/gpt4tools-vicuna-13b-lora'><img src='https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Model-blue'></a>  [![YouTube](https://badges.aleen42.com/src/youtube.svg)](https://youtu.be/Qrj94ibQIT8) [![arXiv](https://img.shields.io/badge/arXiv-Paper-<COLOR>.svg)](https://arxiv.org/pdf/2305.18752.pdf)
 
 ## Updates
 
-* 🔥 We now release pretrained GPT4Tools models with <strong><font color="#008AD7">Vicuna-13B</font></strong> and released the dataset for <strong><font color="#008AD7">self-instruction</font></strong>. Check out the blog and demo.
+* 🔥 We now release the <a href='https://arxiv.org/pdf/2305.18752.pdf'><strong><font color='#008AD7'>paper</font></strong></a> and new <a href='https://huggingface.co/spaces/stevengrove/GPT4Tools'><strong><font color='#008AD7'>demo</font></strong></a> with LLAVA, OPT, LlaMA and Vicuna.
+* 🔥 We released pretrained GPT4Tools models with <strong><font color="#008AD7">Vicuna-13B</font></strong> and released the dataset for <strong><font color="#008AD7">self-instruction</font></strong>. Check out the blog and demo.
 
 ## Demo
 We provide some selected examples using GPT4Tools in this section. More examples can be found in our ![project page](https://gpt4tools.github.io).
