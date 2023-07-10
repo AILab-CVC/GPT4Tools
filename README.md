@@ -50,15 +50,13 @@ During generation using GPT-3.5, the openai api_key should be set in the env (OP
 
 * Raw Data Generation
 ```
-python3 scripts/get_instruction.py \
-    --caption-path <your_caption_data_path> \
+python3 scripts/get_instruction.py --caption-path <your_caption_data_path> \
 	--instruction-path <instruction_data_path> 
 ```
 
 * Cleaning, and Instructional Data Consutruction
 ```
-python3 scripts/generate_annoations.py \
-    --input-path <instruction_data_path> \
+python3 scripts/generate_annoations.py --input-path <instruction_data_path> \
 	--output-path <annotations_path> \
 	--caption-path <your_caption_data_path> \
 	--alpaca-path <your_alpaca_instruction_path> \
@@ -155,27 +153,30 @@ torchrun --nproc_per_node=8 --master_port=29005 lora_finetune.py \
 
 ### Inference and Evaluation
 * Using 8 GPUs (recommendation)
+
 ```
 bash scripts/batch_inference.sh 8  <path_to_vicuna_with_tokenizer> <path_to_lora_weights> <your_annotation_path> <name_to_save>
 ```
 
 * Using 1 GPU
+
 ```
-python3 inference.py \
-    --base_model <path_to_vicuna_with_tokenizer> \
+python3 inference.py --base_model <path_to_vicuna_with_tokenizer> \
     --lora_model <path_to_lora_weights> \
     --ann_path <your_annotation_path> \
 	--save_name <name_to_save> \
 	--llm_device 'cuda'
 ```
+
 then  
+
 ```
-python3 evaluate_result.py \
-	--ann_path <your_annotation_path> \
+python3 evaluate_result.py --ann_path <your_annotation_path> \
 	--save_name <name_to_save>
 ```
 
 * Inference using GPT-3.5
+
 ```
 python3 inference_chatgpt.py \
 	--ann_path <your_annotation_path> \
