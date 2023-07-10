@@ -62,7 +62,9 @@ python3 scripts/generate_annoations.py \
 	--output-path <annotations_path> \
 	--caption-path <your_caption_data_path> \
 	--alpaca-path <your_alpaca_instruction_path> \
-	--filter --complement --insert-alpaca
+	--filter \
+	--complement \
+	--insert-alpaca
 ```
 
 
@@ -124,9 +126,8 @@ python gpt4tools.py \
 	--base_model <path_to_vicuna_with_tokenizer> \
 	--lora_model <path_to_lora_weights> \
 	--llm_device "cuda:3" \
-	--load "Text2Box_cuda:0,Segmenting_cuda:0,Inpainting_cuda:0,ImageCaptioning_cuda:0,
-		   Text2Image_cuda:1,VisualQuestionAnswering_cuda:1,InstructPix2Pix_cuda:2,
-		   SegText2Image_cuda:2,Image2Pose_cpu,PoseText2Image_cuda:2"
+	--load "Text2Box_cuda:0,Segmenting_cuda:0,Inpainting_cuda:0,ImageCaptioning_cuda:0,   Text2Image_cuda:1,VisualQuestionAnswering_cuda:1,InstructPix2Pix_cuda:2,
+SegText2Image_cuda:2,Image2Pose_cpu,PoseText2Image_cuda:2"
 ```
 You can customize the used tools by specifying ```{tools_name}_{devices}``` after args ```--load``` of ```gpt4tools.py```. ```tools_name``` is illustrated in [tools.md](./docs/tools.md).
 
@@ -155,17 +156,13 @@ torchrun --nproc_per_node=8 --master_port=29005 lora_finetune.py \
 ### Inference and Evaluation
 * Using 8 GPUs (recommendation)
 ```
-bash scripts/batch_inference.sh 8 \ 
-     <path_to_vicuna_with_tokenizer> 
-	 <path_to_lora_weights> \
-	 <your_annotation_path> \ 
-	 <name_to_save>
+bash scripts/batch_inference.sh 8  <path_to_vicuna_with_tokenizer> <path_to_lora_weights> <your_annotation_path> <name_to_save>
 ```
 
 * Using 1 GPU
 ```
 python3 inference.py \
-    --base_model <path_to_vicuna_with_tokenizer> L \
+    --base_model <path_to_vicuna_with_tokenizer> \
     --lora_model <path_to_lora_weights> \
     --ann_path <your_annotation_path> \
 	--save_name <name_to_save> \
