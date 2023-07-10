@@ -178,8 +178,7 @@ python3 evaluate_result.py --ann_path <your_annotation_path> \
 * Inference using GPT-3.5
 
 ```
-python3 inference_chatgpt.py \
-	--ann_path <your_annotation_path> \
+python3 inference_chatgpt.py --ann_path <your_annotation_path> \
 	--save_name <name_to_save> \
 	--model 'davinci'
 ```
