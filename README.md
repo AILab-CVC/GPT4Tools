@@ -32,12 +32,38 @@ We provide some selected examples using GPT4Tools in this section. More examples
 | **Data file name** | **Size** | OneDrive| Google Driver|
 |:------------------:|:--------:| :--------: | :---------:|
 | gpt4tools_71k.json    | 229 MB   | [link](https://1drv.ms/u/s!AqPQkBZ4aeVnhRdryHC9b1NtWJpZ?e=ZHBCqd) | [link](https://drive.google.com/file/d/1JKIT-Or1of7TJuWvmrJpPoOx0cLdcWry/view?usp=share_link)|
+| gpt4tools_val_seen.json    | --   | [link](https://1drv.ms/u/s!AqPQkBZ4aeVnhT1DPh5qZtSoZjtC?e=bDALfB) | [link](https://drive.google.com/file/d/1nDl7zhtQSx-L12K7151DfQD-XTqh_uzc/view?usp=sharing)|
+| gpt4tools_test_unseen.json    | --   | [link](https://1drv.ms/u/s!AqPQkBZ4aeVnhTz3dCV77Ps6abzQ?e=ex4ojQ) | [link](https://drive.google.com/file/d/1BHm0HEwYaVdMRYZiDdECy8ozyix607PH/view?usp=sharing)|
 
 ```gpt4tools_71k.json``` contains 71K instruction-following data we used for fine-tuning the GPT4Tools model. 
 
-The data collection process is illustrated below:
-
+The data collection process is illustrated below: \
 We fed GPT-3.5 with captions from 3K images and descriptions of 22 visual tasks. This produced 66K instructions, each corresponding to a specific visual task and a visual foundation model (tool). Subsequently, we eliminated duplicate instructions and retained 41K sound instructions. To teach the model to utilize tools in a predefined manner, we followed the prompt format used in Visual ChatGPT and converted these instructions into a conversational format. Concurrently, we generated negative data without tool usage by randomly sampling 3K instructions from [`alpaca_gpt4_data`](https://github.com/Instruction-Tuning-with-GPT-4/GPT-4-LLM/blob/main/data/alpaca_gpt4_data.json) and converting them to the defined format. Using the generated 71K instructions, we finetuned the Vicuna using LoRA and got our GPT4Tools, which can automatically decide, control, and utilize distinct tools in a conversation.
+
+```gpt4tools_val_seen.json``` is the manually cleaned instruction data used for validation, which includes instructions related to tools of ```gpt4tools_71k.json```.
+
+```gpt4tools_test_unseen.json``` cleaned instruction data used for testing, including instructions related to some tools that are absented in ```gpt4tools_71k.json```.
+
+### Data Generation
+
+During generation using GPT-3.5, the openai api_key should be set in the env (OPENAI_API_KEY).
+
+* Raw Data Generation
+```
+python3 scripts/get_instruction.py --caption-path <your_caption_data_path> \
+	--instruction-path <instruction_data_path> 
+```
+
+* Cleaning, and Instructional Data Consutruction
+```
+python3 scripts/generate_annoations.py --input-path <instruction_data_path> \
+	--output-path <annotations_path> \
+	--caption-path <your_caption_data_path> \
+	--alpaca-path <your_alpaca_instruction_path> \
+	--filter \
+	--complement \
+	--insert-alpaca
+```
 
 
 ## Models
@@ -98,9 +124,8 @@ python gpt4tools.py \
 	--base_model <path_to_vicuna_with_tokenizer> \
 	--lora_model <path_to_lora_weights> \
 	--llm_device "cuda:3" \
-	--load "Text2Box_cuda:0,Segmenting_cuda:0,Inpainting_cuda:0,ImageCaptioning_cuda:0,
-		   Text2Image_cuda:1,VisualQuestionAnswering_cuda:1,InstructPix2Pix_cuda:2,
-		   SegText2Image_cuda:2,Image2Pose_cpu,PoseText2Image_cuda:2"
+	--load "Text2Box_cuda:0,Segmenting_cuda:0,Inpainting_cuda:0,ImageCaptioning_cuda:0,   Text2Image_cuda:1,VisualQuestionAnswering_cuda:1,InstructPix2Pix_cuda:2,
+SegText2Image_cuda:2,Image2Pose_cpu,PoseText2Image_cuda:2"
 ```
 You can customize the used tools by specifying ```{tools_name}_{devices}``` after args ```--load``` of ```gpt4tools.py```. ```tools_name``` is illustrated in [tools.md](./docs/tools.md).
 
@@ -126,6 +151,41 @@ torchrun --nproc_per_node=8 --master_port=29005 lora_finetune.py \
 |:--------------:|:-----------------:|:-------------:|:----------:|:------------:|:---------------------------------:|:----------:|:------------:|:-----------------------------:|
 |    GPT4Tools & Vicuna-13B   |        512        |      3e-4     |    2048    |      0.0     |                 16                |     16     |     0.05     | [q_proj,k_proj,v_proj,o_proj] |
 
+### Inference and Evaluation
+* Using 8 GPUs (recommendation)
+
+```
+bash scripts/batch_inference.sh 8  <path_to_vicuna_with_tokenizer> <path_to_lora_weights> <your_annotation_path> <name_to_save>
+```
+
+* Using 1 GPU
+
+```
+python3 inference.py --base_model <path_to_vicuna_with_tokenizer> \
+    --lora_model <path_to_lora_weights> \
+    --ann_path <your_annotation_path> \
+	--save_name <name_to_save> \
+	--llm_device 'cuda'
+```
+
+then  
+
+```
+python3 evaluate_result.py --ann_path <your_annotation_path> \
+	--save_name <name_to_save>
+```
+
+* Inference using GPT-3.5
+
+```
+python3 inference_chatgpt.py --ann_path <your_annotation_path> \
+	--save_name <name_to_save> \
+	--model 'davinci'
+```
+The openai api_key should be set in the env (OPENAI_API_KEY).
+
+* ```your_annotation_path``` is 'your_path/gpt4tools_val_seen.json' or 'your_path/gpt4tools_test_unseen.json'.
+
 
 ## Acknowledgement
 * [VisualChatGPT](https://github.com/microsoft/TaskMatrix): It connects ChatGPT and a series of Visual Foundation Models to enable sending and receiving images during chatting.
@@ -136,7 +196,8 @@ If you're using our GPT4Tools in your research or applications, please cite usin
 ```
 @misc{gpt4tools,
   title = {GPT4Tools: Teaching LLM to Use Tools via Self-instruction},
-  author = {Lin Song and Yanwei Li and Rui Yang and Sijie Zhao and Yixiao Ge and Ying Shan},
-  year = {2023},
+  author={Rui Yang, Lin Song, Yanwei Li, Sijie Zhao, Yixiao Ge, Xiu Li, Ying Shan},
+  journal={arXiv preprint arXiv:2305.18752},
+  year={2023}
 }
 ```
