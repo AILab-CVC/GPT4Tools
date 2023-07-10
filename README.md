@@ -37,8 +37,7 @@ We provide some selected examples using GPT4Tools in this section. More examples
 
 ```gpt4tools_71k.json``` contains 71K instruction-following data we used for fine-tuning the GPT4Tools model. 
 
-The data collection process is illustrated below:
-
+The data collection process is illustrated below: \
 We fed GPT-3.5 with captions from 3K images and descriptions of 22 visual tasks. This produced 66K instructions, each corresponding to a specific visual task and a visual foundation model (tool). Subsequently, we eliminated duplicate instructions and retained 41K sound instructions. To teach the model to utilize tools in a predefined manner, we followed the prompt format used in Visual ChatGPT and converted these instructions into a conversational format. Concurrently, we generated negative data without tool usage by randomly sampling 3K instructions from [`alpaca_gpt4_data`](https://github.com/Instruction-Tuning-with-GPT-4/GPT-4-LLM/blob/main/data/alpaca_gpt4_data.json) and converting them to the defined format. Using the generated 71K instructions, we finetuned the Vicuna using LoRA and got our GPT4Tools, which can automatically decide, control, and utilize distinct tools in a conversation.
 
 ```gpt4tools_val_seen.json``` is the manually cleaned instruction data used for validation, which includes instructions related to tools of ```gpt4tools_71k.json```.
@@ -47,23 +46,23 @@ We fed GPT-3.5 with captions from 3K images and descriptions of 22 visual tasks.
 
 ### Data Generation
 
-The openai api_key should be set in the env (OPENAI_API_KEY).
+During generation using GPT-3.5, the openai api_key should be set in the env (OPENAI_API_KEY).
 
 * Raw Data Generation
 ```
 python3 scripts/get_instruction.py \
-        --caption-path <your_caption_data_path> \
-		--instruction-path <instruction_data_path> 
+    --caption-path <your_caption_data_path> \
+	--instruction-path <instruction_data_path> 
 ```
 
 * Cleaning, and Instructional Data Consutruction
 ```
 python3 scripts/generate_annoations.py \
-        --input-path <instruction_data_path> \
-		--output-path <annotations_path> \
-		--caption-path <your_caption_data_path> \
-		--alpaca-path <your_alpaca_instruction_path> \
-		--filter --complement --insert-alpaca
+    --input-path <instruction_data_path> \
+	--output-path <annotations_path> \
+	--caption-path <your_caption_data_path> \
+	--alpaca-path <your_alpaca_instruction_path> \
+	--filter --complement --insert-alpaca
 ```
 
 
@@ -166,25 +165,25 @@ bash scripts/batch_inference.sh 8 \
 * Using 1 GPU
 ```
 python3 inference.py \
-        --base_model <path_to_vicuna_with_tokenizer> L \
-        --lora_model <path_to_lora_weights> \
-        --ann_path <your_annotation_path> \
-		--save_name <name_to_save> \
-		--llm_device 'cuda'
+    --base_model <path_to_vicuna_with_tokenizer> L \
+    --lora_model <path_to_lora_weights> \
+    --ann_path <your_annotation_path> \
+	--save_name <name_to_save> \
+	--llm_device 'cuda'
 ```
 then  
 ```
 python3 evaluate_result.py \
-       --ann_path <your_annotation_path> \
-	   --save_name <name_to_save>
+	--ann_path <your_annotation_path> \
+	--save_name <name_to_save>
 ```
 
 * Inference using GPT-3.5
 ```
 python3 inference_chatgpt.py \
-        --ann_path <your_annotation_path> \
-		--save_name <name_to_save> \
-		--model 'davinci'
+	--ann_path <your_annotation_path> \
+	--save_name <name_to_save> \
+	--model 'davinci'
 ```
 The openai api_key should be set in the env (OPENAI_API_KEY).
 
