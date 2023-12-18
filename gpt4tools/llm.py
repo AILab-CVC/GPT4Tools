@@ -9,7 +9,7 @@ from langchain.llms.utils import enforce_stop_tokens
 from langchain.utils import get_from_dict_or_env
 
 from peft import PeftModel
-from transformers import LlamaForCausalLM, LlamaTokenizer, GenerationConfig
+from transformers import LlamaForCausalLM, LlamaTokenizer, GenerationConfig, AutoTokenizer
 
 DEFAULT_REPO_ID = "gpt2"
 VALID_TASKS = ("text2text-generation", "text-generation")
@@ -26,7 +26,8 @@ class LlamaHuggingFace:
                  temperature=0.1,
                  top_p=0.75,
                  top_k=40,
-                 num_beams=1):
+                 num_beams=1,
+                 cache_dir=None):
         self.task = task
         self.device = device
         self.temperature = temperature
@@ -34,26 +35,33 @@ class LlamaHuggingFace:
         self.top_p = top_p
         self.top_k = top_k
         self.num_beams = num_beams
-        self.tokenizer = LlamaTokenizer.from_pretrained(
-            base_model, use_fast=False)
+        self.tokenizer = AutoTokenizer.from_pretrained(
+            base_model, 
+            cache_dir=cache_dir,
+            padding_side="right",
+            use_fast=False)
+        self.tokenizer.pad_token = self.tokenizer.unk_token
+
+        print(f"Loading {base_model}...")
         model = LlamaForCausalLM.from_pretrained(
             base_model,
-            torch_dtype=torch.float16)
-        self.model = PeftModel.from_pretrained(
-            model,
-            lora_model,
-            torch_dtype=torch.float16)
+            cache_dir=cache_dir,
+            torch_dtype=torch.float16,
+            low_cpu_mem_usage=True
+            )
+        
+        print(f"Loading LoRA weights from {lora_model}")
+        model = PeftModel.from_pretrained(model, lora_model)
+        print(f"Merging weights")
+        model = model.merge_and_unload()
+        self.model = model
         self.model.to(device)
 
-        self.tokenizer.pad_token_id = 0
-        self.model.config.pad_token_id = 0
-        self.model.config.bos_token_id = 1
-        self.model.config.eos_token_id = 2
-
         if device == "cpu":
-            self.model.float()
+            self.model.to(torch.float32)
         else:
-            self.model.half()
+            self.model.to(torch.float16)
+        
         self.model.eval()
     
     @torch.no_grad()
@@ -61,7 +69,7 @@ class LlamaHuggingFace:
         if inputs.endswith('Thought:'):
             inputs = inputs[:-len('Thought:')]
         inputs = inputs.replace('Observation:\n\nObservation:', 'Observation:')
-        inputs = inputs + '### ASSISTANT:\n'
+        inputs = "USER: \n" + inputs + 'ASSISTANT:'
         input_ids = self.tokenizer(inputs, return_tensors="pt").to(self.device).input_ids
 
         generation_config = GenerationConfig(
@@ -79,12 +87,12 @@ class LlamaHuggingFace:
             skip_special_tokens=True,
             clean_up_tokenization_spaces=False)
 
-        response = [res.replace('### ASSISTANT:\n', '') for res in response]
+        response = [res.replace('ASSISTANT:', '') for res in response]
         response = [{'generated_text': res} for res in response]
         return response
 
 
-class Llama(LLM, BaseModel):
+class LlamaLangChain(LLM, BaseModel):
     """Wrapper around LLAMA  models.
     """
 
@@ -101,6 +109,10 @@ class Llama(LLM, BaseModel):
 
         extra = Extra.forbid
 
+    def set_llm_params(self, **kwargs):
+        for key, value in kwargs.items():
+            setattr(self.client, key, value)
+
     @root_validator()
     def validate_environment(cls, values: Dict) -> Dict:
         """Validate that api key and python package exists in environment."""
@@ -115,7 +127,8 @@ class Llama(LLM, BaseModel):
             temperature=model_kwargs.get("temperature"),
             top_p=model_kwargs.get("top_p"),
             top_k=model_kwargs.get("top_k"),
-            num_beams=model_kwargs.get("num_beams")
+            num_beams=model_kwargs.get("num_beams"),
+            cache_dir=model_kwargs.get("cache_dir"),
         )
         if client.task not in VALID_TASKS:
             raise ValueError(

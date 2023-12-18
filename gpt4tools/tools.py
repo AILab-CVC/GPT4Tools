@@ -1,82 +1,51 @@
 # coding: utf-8
 import os
-import gradio as gr
 import random
 import torch
 import cv2
-import re
 import uuid
-from PIL import Image, ImageDraw, ImageOps, ImageFont
-import math
-import numpy as np
-import argparse
-import inspect
-import tempfile
-from transformers import CLIPSegProcessor, CLIPSegForImageSegmentation
-from transformers import pipeline, BlipProcessor, BlipForConditionalGeneration, BlipForQuestionAnswering
-from transformers import AutoImageProcessor, UperNetForSemanticSegmentation
-
-from diffusers import StableDiffusionPipeline, StableDiffusionInpaintPipeline, StableDiffusionInstructPix2PixPipeline
-from diffusers import EulerAncestralDiscreteScheduler
-from diffusers import StableDiffusionControlNetPipeline, ControlNetModel, UniPCMultistepScheduler
-from controlnet_aux import OpenposeDetector, MLSDdetector, HEDdetector
-
-from langchain.agents.initialize import initialize_agent
-from langchain.agents.tools import Tool
-from langchain.chains.conversation.memory import ConversationBufferMemory
-
-# Grounding DINO
-import groundingdino.datasets.transforms as T
-from groundingdino.models import build_model
-from groundingdino.util import box_ops
-from groundingdino.util.slconfig import SLConfig
-from groundingdino.util.utils import clean_state_dict, get_phrases_from_posmap
-
-# segment anything
-from segment_anything import build_sam, SamPredictor, SamAutomaticMaskGenerator
-import cv2
+import wget
+import warnings
 import numpy as np
 import matplotlib.pyplot as plt
-import wget
+from PIL import Image, ImageDraw, ImageOps, ImageFont
 
-from llama import Llama
+from transformers import CLIPSegProcessor, CLIPSegForImageSegmentation
+from transformers import AutoImageProcessor, UperNetForSemanticSegmentation
+from transformers import pipeline, BlipProcessor, BlipForConditionalGeneration, BlipForQuestionAnswering
 
+from diffusers import EulerAncestralDiscreteScheduler
+from diffusers import StableDiffusionControlNetPipeline, ControlNetModel, UniPCMultistepScheduler
+from diffusers import StableDiffusionPipeline, StableDiffusionInpaintPipeline, StableDiffusionInstructPix2PixPipeline
 
-GPT4TOOLS_PREFIX = """GPT4Tools can handle various text and visual tasks, such as answering questions and providing in-depth explanations and discussions. It generates human-like text and uses tools to indirectly understand images. When referring to images, GPT4Tools follows strict file name rules. To complete visual tasks, GPT4Tools uses tools and stays loyal to observation outputs. Users can provide new images to GPT4Tools with a description, but tools must be used for subsequent tasks.
-TOOLS:
-------
+from controlnet_aux import OpenposeDetector, MLSDdetector, HEDdetector
 
-GPT4Tools has access to the following tools:"""
+# Grounding DINO
+try:
+    import groundingdino.datasets.transforms as T
+    from groundingdino.models import build_model as build_groundingdino_model
+    from groundingdino.util import box_ops
+    from groundingdino.util.slconfig import SLConfig
+    from groundingdino.util.utils import clean_state_dict, get_phrases_from_posmap
+except:
+    warnings.warn("groundingdino doesn't be installed. Don't support detection tools!")
 
+# segment anything
+try:
+    from segment_anything import build_sam, SamPredictor, SamAutomaticMaskGenerator
+except:
+    warnings.warn("segment anything doesn't be installed. Don't support segment tools!")
 
-GPT4TOOLS_FORMAT_INSTRUCTIONS = """To use a tool, please use the following format:
-
-```
-Thought: Do I need to use a tool? Yes
-Action: the action to take, should be one of [{tool_names}]
-Action Input: the input to the action
-Observation: the result of the action
-```
-
-When you have a response to say to the Human, or if you do not need to use a tool, you MUST use the format:
-
-```
-Thought: Do I need to use a tool? No
-{ai_prefix}: [your response here]
-```
-"""
-
-GPT4TOOLS_SUFFIX = """Follow file name rules and do not fake non-existent file names. Remember to provide the image file name loyally from the last tool observation.
-
-Previous conversation:
-{chat_history}
-
-New input: {input}
-GPT4Tools needs to use tools to observe images, not directly imagine them. Thoughts and observations in the conversation are only visible to GPT4Tools. When answering human questions, repeat important information. Let's think step by step.
-{agent_scratchpad}"""
-
-
-os.makedirs('image', exist_ok=True)
+# set cache_dir
+try:
+    CACHE_DIR=os.getenv("CACHE_DIR")
+except:
+    if os.getenv("TRANSFORMERS_CACHE") is not None:
+        CACHE_DIR=os.getenv("TRANSFORMERS_CACHE")
+    else:
+        CACHE_DIR="../cache"
+        if not os.path.exists(CACHE_DIR): os.mkdir(CACHE_DIR)
+        warnings.warn(f"Set CACHE_DIR to {CACHE_DIR}")
 
 
 def seed_everything(seed):
@@ -86,6 +55,12 @@ def seed_everything(seed):
     torch.cuda.manual_seed_all(seed)
     return seed
 
+def get_new_image_name(org_img_name, func_name="update"):
+    head_tail = os.path.split(org_img_name)
+    head = head_tail[0]
+    tail = head_tail[1]
+    new_file_name = f'{str(uuid.uuid4())[:8]}.png'
+    return os.path.join(head, new_file_name)
 
 def prompts(name, description):
     def decorator(func):
@@ -94,7 +69,6 @@ def prompts(name, description):
         return func
 
     return decorator
-
 
 def blend_gt2pt(old_image, new_image, sigma=0.15, steps=100):
     new_size = new_image.size
@@ -153,23 +127,6 @@ def blend_gt2pt(old_image, new_image, sigma=0.15, steps=100):
     return gaussian_img
 
 
-def cut_dialogue_history(history_memory, keep_last_n_paragraphs=1):
-    if history_memory is None or len(history_memory) == 0:
-        return history_memory
-    paragraphs = history_memory.split('Human:')
-    if len(paragraphs) <= keep_last_n_paragraphs:
-        return history_memory
-    return 'Human:' + 'Human:'.join(paragraphs[-1:])
-
-
-def get_new_image_name(org_img_name, func_name="update"):
-    head_tail = os.path.split(org_img_name)
-    head = head_tail[0]
-    tail = head_tail[1]
-    new_file_name = f'{str(uuid.uuid4())[:8]}.png'
-    return os.path.join(head, new_file_name)
-
-
 class InstructPix2Pix:
     def __init__(self, device):
         print(f"Initializing InstructPix2Pix to {device}")
@@ -177,7 +134,8 @@ class InstructPix2Pix:
         self.torch_dtype = torch.float16 if 'cuda' in device else torch.float32
         self.pipe = StableDiffusionInstructPix2PixPipeline.from_pretrained("timbrooks/instruct-pix2pix",
                                                                            safety_checker=None,
-                                                                           torch_dtype=self.torch_dtype).to(device)
+                                                                           torch_dtype=self.torch_dtype,
+                                                                           cache_dir=CACHE_DIR).to(device)
         self.pipe.scheduler = EulerAncestralDiscreteScheduler.from_config(self.pipe.scheduler.config)
 
     @prompts(name="Instruct Image Using Text",
@@ -204,7 +162,8 @@ class Text2Image:
         self.device = device
         self.torch_dtype = torch.float16 if 'cuda' in device else torch.float32
         self.pipe = StableDiffusionPipeline.from_pretrained("runwayml/stable-diffusion-v1-5",
-                                                            torch_dtype=self.torch_dtype)
+                                                            torch_dtype=self.torch_dtype,
+                                                            cache_dir=CACHE_DIR)
         self.pipe.to(device)
         self.a_prompt = 'best quality, extremely detailed'
         self.n_prompt = 'longbody, lowres, bad anatomy, bad hands, missing fingers, extra digit, ' \
@@ -229,9 +188,9 @@ class ImageCaptioning:
         print(f"Initializing ImageCaptioning to {device}")
         self.device = device
         self.torch_dtype = torch.float16 if 'cuda' in device else torch.float32
-        self.processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
+        self.processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base", cache_dir=CACHE_DIR)
         self.model = BlipForConditionalGeneration.from_pretrained(
-            "Salesforce/blip-image-captioning-base", torch_dtype=self.torch_dtype).to(self.device)
+            "Salesforce/blip-image-captioning-base", torch_dtype=self.torch_dtype, cache_dir=CACHE_DIR).to(self.device)
 
     @prompts(name="Get Photo Description",
              description="useful when you want to know what is inside the photo. receives image_path as input. "
@@ -273,10 +232,11 @@ class CannyText2Image:
         print(f"Initializing CannyText2Image to {device}")
         self.torch_dtype = torch.float16 if 'cuda' in device else torch.float32
         self.controlnet = ControlNetModel.from_pretrained("fusing/stable-diffusion-v1-5-controlnet-canny",
-                                                          torch_dtype=self.torch_dtype)
+                                                          torch_dtype=self.torch_dtype,
+                                                          cache_dir=CACHE_DIR)
         self.pipe = StableDiffusionControlNetPipeline.from_pretrained(
             "runwayml/stable-diffusion-v1-5", controlnet=self.controlnet, safety_checker=None,
-            torch_dtype=self.torch_dtype)
+            torch_dtype=self.torch_dtype, cache_dir=CACHE_DIR)
         self.pipe.scheduler = UniPCMultistepScheduler.from_config(self.pipe.scheduler.config)
         self.pipe.to(device)
         self.seed = -1
@@ -308,7 +268,7 @@ class CannyText2Image:
 class Image2Line:
     def __init__(self, device):
         print("Initializing Image2Line")
-        self.detector = MLSDdetector.from_pretrained('lllyasviel/ControlNet')
+        self.detector = MLSDdetector.from_pretrained('lllyasviel/ControlNet', cache_dir=CACHE_DIR)
 
     @prompts(name="Line Detection On Image",
              description="useful when you want to detect the straight line of the image. "
@@ -329,10 +289,12 @@ class LineText2Image:
         print(f"Initializing LineText2Image to {device}")
         self.torch_dtype = torch.float16 if 'cuda' in device else torch.float32
         self.controlnet = ControlNetModel.from_pretrained("fusing/stable-diffusion-v1-5-controlnet-mlsd",
-                                                          torch_dtype=self.torch_dtype)
+                                                          torch_dtype=self.torch_dtype,
+                                                          cache_dir=CACHE_DIR)
         self.pipe = StableDiffusionControlNetPipeline.from_pretrained(
             "runwayml/stable-diffusion-v1-5", controlnet=self.controlnet, safety_checker=None,
-            torch_dtype=self.torch_dtype
+            torch_dtype=self.torch_dtype,
+            cache_dir=CACHE_DIR
         )
         self.pipe.scheduler = UniPCMultistepScheduler.from_config(self.pipe.scheduler.config)
         self.pipe.to(device)
@@ -366,7 +328,7 @@ class LineText2Image:
 class Image2Hed:
     def __init__(self, device):
         print("Initializing Image2Hed")
-        self.detector = HEDdetector.from_pretrained('lllyasviel/ControlNet')
+        self.detector = HEDdetector.from_pretrained('lllyasviel/ControlNet', cache_dir=CACHE_DIR)
 
     @prompts(name="Hed Detection On Image",
              description="useful when you want to detect the soft hed boundary of the image. "
@@ -387,10 +349,11 @@ class HedText2Image:
         print(f"Initializing HedText2Image to {device}")
         self.torch_dtype = torch.float16 if 'cuda' in device else torch.float32
         self.controlnet = ControlNetModel.from_pretrained("fusing/stable-diffusion-v1-5-controlnet-hed",
-                                                          torch_dtype=self.torch_dtype)
+                                                          torch_dtype=self.torch_dtype, 
+                                                          cache_dir=CACHE_DIR)
         self.pipe = StableDiffusionControlNetPipeline.from_pretrained(
             "runwayml/stable-diffusion-v1-5", controlnet=self.controlnet, safety_checker=None,
-            torch_dtype=self.torch_dtype
+            torch_dtype=self.torch_dtype, cache_dir=CACHE_DIR
         )
         self.pipe.scheduler = UniPCMultistepScheduler.from_config(self.pipe.scheduler.config)
         self.pipe.to(device)
@@ -424,7 +387,7 @@ class HedText2Image:
 class Image2Scribble:
     def __init__(self, device):
         print("Initializing Image2Scribble")
-        self.detector = HEDdetector.from_pretrained('lllyasviel/ControlNet')
+        self.detector = HEDdetector.from_pretrained('lllyasviel/ControlNet', cache_dir=CACHE_DIR)
 
     @prompts(name="Sketch Detection On Image",
              description="useful when you want to generate a scribble of the image. "
@@ -445,10 +408,10 @@ class ScribbleText2Image:
         print(f"Initializing ScribbleText2Image to {device}")
         self.torch_dtype = torch.float16 if 'cuda' in device else torch.float32
         self.controlnet = ControlNetModel.from_pretrained("fusing/stable-diffusion-v1-5-controlnet-scribble",
-                                                          torch_dtype=self.torch_dtype)
+                                                          torch_dtype=self.torch_dtype, cache_dir=CACHE_DIR)
         self.pipe = StableDiffusionControlNetPipeline.from_pretrained(
             "runwayml/stable-diffusion-v1-5", controlnet=self.controlnet, safety_checker=None,
-            torch_dtype=self.torch_dtype
+            torch_dtype=self.torch_dtype, cache_dir=CACHE_DIR
         )
         self.pipe.scheduler = UniPCMultistepScheduler.from_config(self.pipe.scheduler.config)
         self.pipe.to(device)
@@ -480,7 +443,7 @@ class ScribbleText2Image:
 class Image2Pose:
     def __init__(self, device):
         print("Initializing Image2Pose")
-        self.detector = OpenposeDetector.from_pretrained('lllyasviel/ControlNet')
+        self.detector = OpenposeDetector.from_pretrained('lllyasviel/ControlNet', cache_dir=CACHE_DIR)
 
     @prompts(name="Pose Detection On Image",
              description="useful when you want to detect the human pose of the image. "
@@ -500,10 +463,11 @@ class PoseText2Image:
         print(f"Initializing PoseText2Image to {device}")
         self.torch_dtype = torch.float16 if 'cuda' in device else torch.float32
         self.controlnet = ControlNetModel.from_pretrained("fusing/stable-diffusion-v1-5-controlnet-openpose",
-                                                          torch_dtype=self.torch_dtype)
+                                                          torch_dtype=self.torch_dtype, 
+                                                          cache_dir=CACHE_DIR)
         self.pipe = StableDiffusionControlNetPipeline.from_pretrained(
             "runwayml/stable-diffusion-v1-5", controlnet=self.controlnet, safety_checker=None,
-            torch_dtype=self.torch_dtype)
+            torch_dtype=self.torch_dtype, cache_dir=CACHE_DIR)
         self.pipe.scheduler = UniPCMultistepScheduler.from_config(self.pipe.scheduler.config)
         self.pipe.to(device)
         self.num_inference_steps = 20
@@ -540,10 +504,10 @@ class SegText2Image:
         print(f"Initializing SegText2Image to {device}")
         self.torch_dtype = torch.float16 if 'cuda' in device else torch.float32
         self.controlnet = ControlNetModel.from_pretrained("fusing/stable-diffusion-v1-5-controlnet-seg",
-                                                          torch_dtype=self.torch_dtype)
+                                                          torch_dtype=self.torch_dtype, cache_dir=CACHE_DIR)
         self.pipe = StableDiffusionControlNetPipeline.from_pretrained(
             "runwayml/stable-diffusion-v1-5", controlnet=self.controlnet, safety_checker=None,
-            torch_dtype=self.torch_dtype)
+            torch_dtype=self.torch_dtype, cache_dir=CACHE_DIR)
         self.pipe.scheduler = UniPCMultistepScheduler.from_config(self.pipe.scheduler.config)
         self.pipe.to(device)
         self.seed = -1
@@ -599,10 +563,11 @@ class DepthText2Image:
         print(f"Initializing DepthText2Image to {device}")
         self.torch_dtype = torch.float16 if 'cuda' in device else torch.float32
         self.controlnet = ControlNetModel.from_pretrained(
-            "fusing/stable-diffusion-v1-5-controlnet-depth", torch_dtype=self.torch_dtype)
+            "fusing/stable-diffusion-v1-5-controlnet-depth", torch_dtype=self.torch_dtype, 
+            cache_dir=CACHE_DIR)
         self.pipe = StableDiffusionControlNetPipeline.from_pretrained(
             "runwayml/stable-diffusion-v1-5", controlnet=self.controlnet, safety_checker=None,
-            torch_dtype=self.torch_dtype)
+            torch_dtype=self.torch_dtype, cache_dir=CACHE_DIR)
         self.pipe.scheduler = UniPCMultistepScheduler.from_config(self.pipe.scheduler.config)
         self.pipe.to(device)
         self.seed = -1
@@ -670,10 +635,11 @@ class NormalText2Image:
         print(f"Initializing NormalText2Image to {device}")
         self.torch_dtype = torch.float16 if 'cuda' in device else torch.float32
         self.controlnet = ControlNetModel.from_pretrained(
-            "fusing/stable-diffusion-v1-5-controlnet-normal", torch_dtype=self.torch_dtype)
+            "fusing/stable-diffusion-v1-5-controlnet-normal", torch_dtype=self.torch_dtype,
+            cache_dir=CACHE_DIR)
         self.pipe = StableDiffusionControlNetPipeline.from_pretrained(
             "runwayml/stable-diffusion-v1-5", controlnet=self.controlnet, safety_checker=None,
-            torch_dtype=self.torch_dtype)
+            torch_dtype=self.torch_dtype, cache_dir=CACHE_DIR)
         self.pipe.scheduler = UniPCMultistepScheduler.from_config(self.pipe.scheduler.config)
         self.pipe.to(device)
         self.seed = -1
@@ -707,9 +673,10 @@ class VisualQuestionAnswering:
         print(f"Initializing VisualQuestionAnswering to {device}")
         self.torch_dtype = torch.float16 if 'cuda' in device else torch.float32
         self.device = device
-        self.processor = BlipProcessor.from_pretrained("Salesforce/blip-vqa-base")
+        self.processor = BlipProcessor.from_pretrained("Salesforce/blip-vqa-base", cache_dir=CACHE_DIR)
         self.model = BlipForQuestionAnswering.from_pretrained(
-            "Salesforce/blip-vqa-base", torch_dtype=self.torch_dtype).to(self.device)
+            "Salesforce/blip-vqa-base", torch_dtype=self.torch_dtype,
+            cache_dir=CACHE_DIR).to(self.device)
 
     @prompts(name="Answer Question About The Image",
              description="useful when you need an answer for a question based on an image. "
@@ -728,12 +695,21 @@ class VisualQuestionAnswering:
 
 class Segmenting:
     def __init__(self, device):
+        # check import
+        try:
+            from segment_anything import build_sam, SamPredictor, SamAutomaticMaskGenerator
+        except:
+            ImportError
+
         print(f"Inintializing Segmentation to {device}")
         self.device = device
         self.torch_dtype = torch.float16 if 'cuda' in device else torch.float32
-        self.model_checkpoint_path = os.path.join("checkpoints","sam")
 
+        path = os.path.join(CACHE_DIR, "sam")
+        if not os.path.exists(path): os.mkdir(path)
+        self.model_checkpoint_path = os.path.join(path, "sam.pth")
         self.download_parameters()
+
         self.sam = build_sam(checkpoint=self.model_checkpoint_path).to(device)
         self.sam_predictor = SamPredictor(self.sam)
         self.mask_generator = SamAutomaticMaskGenerator(self.sam)
@@ -758,7 +734,6 @@ class Segmenting:
         ax.add_patch(plt.Rectangle((x0, y0), w, h, edgecolor='green', facecolor=(0,0,0,0), lw=2)) 
         ax.text(x0, y0, label)
 
-    
     def get_mask_with_boxes(self, image_pil, image, boxes_filt):
 
         size = image_pil.size
@@ -841,11 +816,23 @@ class Segmenting:
     
 class Text2Box:
     def __init__(self, device):
+        # check import
+        try:
+            import groundingdino.datasets.transforms as T
+            from groundingdino.models import build_model as build_groundingdino_model
+            from groundingdino.util import box_ops
+            from groundingdino.util.slconfig import SLConfig
+            from groundingdino.util.utils import clean_state_dict, get_phrases_from_posmap
+        except:
+            ImportError
+        
         print(f"Initializing ObjectDetection to {device}")
         self.device = device
         self.torch_dtype = torch.float16 if 'cuda' in device else torch.float32
-        self.model_checkpoint_path = os.path.join("checkpoints","groundingdino")
-        self.model_config_path = os.path.join("checkpoints","grounding_config.py")
+        path = os.path.join(CACHE_DIR, "groundingdino")
+        if not os.path.exists(path): os.mkdir(path)
+        self.model_checkpoint_path = os.path.join(path, "groundingdino.pth")
+        self.model_config_path = os.path.join(path, "grounding_config.py")
         self.download_parameters()
         self.box_threshold = 0.3
         self.text_threshold = 0.25
@@ -854,10 +841,11 @@ class Text2Box:
     def download_parameters(self):
         url = "https://github.com/IDEA-Research/GroundingDINO/releases/download/v0.1.0-alpha/groundingdino_swint_ogc.pth"
         if not os.path.exists(self.model_checkpoint_path):
-            wget.download(url,out=self.model_checkpoint_path)
+            wget.download(url, out=self.model_checkpoint_path)
         config_url = "https://raw.githubusercontent.com/IDEA-Research/GroundingDINO/main/groundingdino/config/GroundingDINO_SwinT_OGC.py"
         if not os.path.exists(self.model_config_path):
             wget.download(config_url,out=self.model_config_path)
+    
     def load_image(self,image_path):
          # load image
         image_pil = Image.open(image_path).convert("RGB")  # load image
@@ -875,7 +863,7 @@ class Text2Box:
     def load_model(self):
         args = SLConfig.fromfile(self.model_config_path)
         args.device = self.device
-        model = build_model(args)
+        model = build_groundingdino_model(args)
         checkpoint = torch.load(self.model_checkpoint_path, map_location="cpu")
         load_res = model.load_state_dict(clean_state_dict(checkpoint["model"]), strict=False)
         print(load_res)
@@ -991,7 +979,8 @@ class Inpainting:
         self.torch_dtype = torch.float16 if 'cuda' in self.device else torch.float32
 
         self.inpaint = StableDiffusionInpaintPipeline.from_pretrained(
-            "runwayml/stable-diffusion-inpainting", revision=self.revision, torch_dtype=self.torch_dtype).to(device)
+            "runwayml/stable-diffusion-inpainting", revision=self.revision, torch_dtype=self.torch_dtype,
+            cache_dir=CACHE_DIR).to(device)
     def __call__(self, prompt, original_image, mask_image):
         update_image = self.inpaint(prompt=prompt, image=original_image.resize((512, 512)),
                                      mask_image=mask_image.resize((512, 512))).images[0]
@@ -1083,142 +1072,3 @@ class ImageEditing:
             f"\nProcessed ImageEditing, Input Image: {image_path}, Replace {to_be_replaced_txt} to {replace_with_txt}, "
             f"Output Image: {updated_image_path}")
         return updated_image_path
-
-
-class ConversationBot:
-    def __init__(self, load_dict, llm_kwargs):
-        # load_dict = {'VisualQuestionAnswering':'cuda:0', 'ImageCaptioning':'cuda:1',...}
-        print(f"Initializing GPT4Tools, load_dict={load_dict}")
-        if 'ImageCaptioning' not in load_dict:
-            raise ValueError("You have to load ImageCaptioning as a basic function for GPT4Tools")
-
-        self.models = {}
-        # Load Basic Foundation Models
-        for class_name, device in load_dict.items():
-            self.models[class_name] = globals()[class_name](device=device)
-
-        # Load Template Foundation Models
-        for class_name, module in globals().items():
-            if getattr(module, 'template_model', False):
-                template_required_names = {k for k in inspect.signature(module.__init__).parameters.keys() if k!='self'}
-                loaded_names = set([type(e).__name__ for e in self.models.values()])
-                if template_required_names.issubset(loaded_names):
-                    self.models[class_name] = globals()[class_name](
-                        **{name: self.models[name] for name in template_required_names})
-        
-        print(f"All the Available Functions: {self.models}")
-
-        self.tools = []
-        for instance in self.models.values():
-            for e in dir(instance):
-                if e.startswith('inference'):
-                    func = getattr(instance, e)
-                    self.tools.append(Tool(name=func.name, description=func.description, func=func))
-        self.llm = Llama(model_kwargs=llm_kwargs) 
-        self.memory = ConversationBufferMemory(memory_key="chat_history", output_key='output')
-
-    def init_agent(self, lang):
-        self.memory.clear() #clear previous history
-        if lang=='English':
-            PREFIX, FORMAT_INSTRUCTIONS, SUFFIX = GPT4TOOLS_PREFIX, GPT4TOOLS_FORMAT_INSTRUCTIONS, GPT4TOOLS_SUFFIX
-            place = "Enter text and press enter, or upload an image"
-            label_clear = "Clear"
-        else:
-            raise NotImplementedError(f'{lang} is not supported yet')
-        self.agent = initialize_agent(
-            self.tools,
-            self.llm,
-            agent="conversational-react-description",
-            verbose=True,
-            memory=self.memory,
-            return_intermediate_steps=True,
-            agent_kwargs={'prefix': PREFIX, 'format_instructions': FORMAT_INSTRUCTIONS,
-                          'suffix': SUFFIX}, )
-        return gr.update(visible = True), gr.update(visible = False), gr.update(placeholder=place), gr.update(value=label_clear)
-
-    def run_text(self, text, state):
-        self.agent.memory.buffer = cut_dialogue_history(self.agent.memory.buffer)
-        res = self.agent({"input": text.strip()})
-        res['output'] = res['output'].replace("\\", "/")
-        response = re.sub('(image/[-\w]*.png)', lambda m: f'![](file={m.group(0)})*{m.group(0)}*', res['output'])
-        state = state + [(text, response)]
-        print(f"\nProcessed run_text, Input text: {text}\nCurrent state: {state}\n"
-              f"Current Memory: {self.agent.memory.buffer}")
-        return state, state
-
-    def run_image(self, image, state, txt, lang='English'):
-        image_filename = os.path.join('image', f"{str(uuid.uuid4())[:8]}.png")
-        print("======>Auto Resize Image...")
-        img = Image.open(image.name)
-        width, height = img.size
-        ratio = min(512 / width, 512 / height)
-        width_new, height_new = (round(width * ratio), round(height * ratio))
-        width_new = int(np.round(width_new / 64.0)) * 64
-        height_new = int(np.round(height_new / 64.0)) * 64
-        img = img.resize((width_new, height_new))
-        img = img.convert('RGB')
-        img.save(image_filename, "PNG")
-        print(f"Resize image form {width}x{height} to {width_new}x{height_new}")
-        description = self.models['ImageCaptioning'].inference(image_filename)
-        if lang == 'English':
-            Human_prompt = f'\nHuman: Provide an image named {image_filename}. The description is: {description}. Understand the image using tools.\n'
-            AI_prompt = "Received."
-        else:
-            raise NotImplementedError(f'{lang} is not supported yet')
-        self.agent.memory.buffer = self.agent.memory.buffer + Human_prompt + 'AI: ' + AI_prompt
-        state = state + [(f"![](file={image_filename})*{image_filename}*", AI_prompt)]
-        print(f"\nProcessed run_image, Input image: {image_filename}\nCurrent state: {state}\n"
-              f"Current Memory: {self.agent.memory.buffer}")
-        return state, state, f'{txt} {image_filename} '
-
-
-if __name__ == '__main__':
-    if not os.path.exists("checkpoints"):
-        os.mkdir("checkpoints")
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--base_model', type=str, required=True, help='folder path to the vicuna with tokenizer')
-    parser.add_argument('--lora_model', type=str, required=True, help='folder path to the lora model')
-    parser.add_argument('--load', type=str, default='ImageCaptioning_cuda:0,Text2Image_cuda:0')
-    parser.add_argument('--llm_device', type=str, default='cpu', help='device to run the llm model')
-    parser.add_argument('--temperature', type=float, default=0.1, help='temperature for the llm model')
-    parser.add_argument('--max_new_tokens', type=int, default=512, help='max number of new tokens to generate')
-    parser.add_argument('--top_p', type=float, default=0.75, help='top_p for the llm model')
-    parser.add_argument('--top_k', type=int, default=40, help='top_k for the llm model')
-    parser.add_argument('--num_beams', type=int, default=1, help='num_beams for the llm model')
-    args = parser.parse_args()
-    load_dict = {e.split('_')[0].strip(): e.split('_')[1].strip() for e in args.load.split(',')}
-    llm_kwargs = {'base_model': args.base_model,
-                  'lora_model': args.lora_model,
-                  'device': args.llm_device,
-                  'temperature': args.temperature,
-                  'max_new_tokens': args.max_new_tokens,
-                  'top_p': args.top_p,
-                  'top_k': args.top_k,
-                  'num_beams': args.num_beams}
-    bot = ConversationBot(load_dict=load_dict, llm_kwargs=llm_kwargs)
-    with gr.Blocks() as demo:
-        chatbot = gr.Chatbot(elem_id="chatbot", label="🦙 GPT4Tools").style(height=700)
-        state = gr.State([])
-        with gr.Row(visible=True) as input_raws:
-            with gr.Column(scale=0.7):
-                txt = gr.Textbox(show_label=False, placeholder="Enter text and press enter, or upload an image").style(
-                    container=False)
-            with gr.Column(scale=0.15, min_width=0):
-                clear = gr.Button("Clear")
-            with gr.Column(scale=0.15, min_width=0):
-                btn = gr.UploadButton(label="🖼️",file_types=["image"])
-
-        # TODO: support more language 
-        bot.init_agent('English')
-        txt.submit(bot.run_text, [txt, state], [chatbot, state])
-        txt.submit(lambda: "", None, txt)
-        btn.upload(bot.run_image, [btn, state, txt], [chatbot, state, txt])
-        clear.click(bot.memory.clear)
-        clear.click(lambda: [], None, chatbot)
-        clear.click(lambda: [], None, state)
-        gr.Examples(
-            examples=["Generate an image of a happy vicuna running in the grass",
-                      "Tell me a funny story about dog"],
-            inputs=txt
-        )
-    demo.launch(server_name="0.0.0.0", server_port=80)
