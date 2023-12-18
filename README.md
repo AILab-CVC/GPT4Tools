@@ -78,8 +78,8 @@ pip install -r requirements.txt
 ```
 # download to your cache dir
 python3 scripts/download.py \
-		--model-names "lmsys/vicuna-13b-v1.5" "lmsys/vicuna-7b-v1.5" \
-		--cache-dir $your_cache_dir
+	--model-names "lmsys/vicuna-13b-v1.5" "lmsys/vicuna-7b-v1.5" \
+	--cache-dir $your_cache_dir
 ```
 
 2. Download gpt4tools LoRA weights following the below links:
@@ -102,35 +102,36 @@ Additionally, you can also download weights to the custom cache.
 ```
 # download huggingface model
 python3 scripts/download.py \
-		--model-names "Salesforce/blip-image-captioning-base" "Salesforce/blip-vqa-base" "timbrooks/instruct-pix2pix" "runwayml/stable-diffusion-v1-5" "runwayml/stable-diffusion-inpainting" "lllyasviel/ControlNet" "fusing/stable-diffusion-v1-5-controlnet-canny" "fusing/stable-diffusion-v1-5-controlnet-mlsd" "fusing/stable-diffusion-v1-5-controlnet-hed" "fusing/stable-diffusion-v1-5-controlnet-scribble" "fusing/stable-diffusion-v1-5-controlnet-openpose" "fusing/stable-diffusion-v1-5-controlnet-seg" "fusing/stable-diffusion-v1-5-controlnet-depth" "fusing/stable-diffusion-v1-5-controlnet-normal" "sam" "groundingdino" \
-		--cache-dir $your_cache_dir
+	--model-names "Salesforce/blip-image-captioning-base" "Salesforce/blip-vqa-base" "timbrooks/instruct-pix2pix" "runwayml/stable-diffusion-v1-5" "runwayml/stable-diffusion-inpainting" "lllyasviel/ControlNet" "fusing/stable-diffusion-v1-5-controlnet-canny" "fusing/stable-diffusion-v1-5-controlnet-mlsd" "fusing/stable-diffusion-v1-5-controlnet-hed" "fusing/stable-diffusion-v1-5-controlnet-scribble" "fusing/stable-diffusion-v1-5-controlnet-openpose" "fusing/stable-diffusion-v1-5-controlnet-seg" "fusing/stable-diffusion-v1-5-controlnet-depth" "fusing/stable-diffusion-v1-5-controlnet-normal" "sam" "groundingdino" \
+	--cache-dir $your_cache_dir
 ```
 
 ### Serving with Web GUI 
-Making a gradio interface on your own devices:
+Following [demo.sh](./scripts/demo.sh) or the below code to make a gradio interface on your own devices:
 ```
 # Advice for 1 GPU
 python gpt4tools_demo.py \
-		--base_model $path_to_vicuna_with_tokenizer \
-		--lora_model $path_to_lora_weights \
-		--llm_device "cpu" \ 
-		--load "Text2Box_cuda:0,Segmenting_cuda:0,Inpainting_cuda:0,ImageCaptioning_cuda:0" \ 
-		--cache-dir $your_cache_dir \
-		--server-port 29509 \
-		--share
+	--base_model $path_to_vicuna_with_tokenizer \
+	--lora_model $path_to_lora_weights \
+	--llm_device "cpu" \ 
+	--load "Text2Box_cuda:0,Segmenting_cuda:0,Inpainting_cuda:0,ImageCaptioning_cuda:0" \ 
+	--cache-dir $your_cache_dir \
+	--server-port 29509 \
+	--share
 ```
 
 ```
 # Advice for 4 GPUs
 python gpt4tools_demo.py \
-		--base_model $path_to_vicuna_with_tokenizer
-		--lora_model $path_to_lora_weights \
-		--llm_device "cuda:3" \
-		--load "Text2Box_cuda:0,Segmenting_cuda:0,Inpainting_cuda:0,ImageCaptioning_cuda:0,Text2Image_cuda:1,VisualQuestionAnswering_cuda:1,InstructPix2Pix_cuda:2,SegText2Image_cuda:2,Image2Pose_cpu,PoseText2Image_cuda:2" \
-		--cache-dir $your_cache_dir \
-		--server-port 29509 \
-		--share
+	--base_model $path_to_vicuna_with_tokenizer
+	--lora_model $path_to_lora_weights \
+	--llm_device "cuda:3" \
+	--load "Text2Box_cuda:0,Segmenting_cuda:0,Inpainting_cuda:0,ImageCaptioning_cuda:0,Text2Image_cuda:1,VisualQuestionAnswering_cuda:1,InstructPix2Pix_cuda:2,SegText2Image_cuda:2,Image2Pose_cpu,PoseText2Image_cuda:2" \
+	--cache-dir $your_cache_dir \
+	--server-port 29509 \
+	--share
 ```
+
 You can customize the used tools by specifying ```{tools_name}_{devices}``` after args ```--load``` of ```gpt4tools_demo.py```. ```tools_name``` is illustrated in [tools.md](./docs/tools.md).
 
 ### Finetuning
@@ -138,22 +139,22 @@ Put the ```gpt4tools_71k.json``` to ```./datasets``` and run the below code.
 
 ```
 deepspeed train.py \
-		--base_model $path_to_vicuna_with_tokenizer \
-		--data_path $path_to_gpt4tools_71k.json \
-		--deepspeed "scripts/zero2.json" \
-		--output_dir output/gpt4tools \
-		--num_epochs 6 \
-		--per_device_train_batch_size 1 \
-		--per_device_eval_batch_size 4 \
-		--gradient_accumulation_steps 16 \
-		--model_max_length 2048 \
-		--lora_target_modules '[q_proj,k_proj,v_proj,o_proj]' \
-		--lora_r 16 \
-		--learning_rate 3e-4 \
-		--lazy_preprocess True \
-		--cache_dir $your_cache_dir \
-		--report_to 'tensorboard' \
-		--gradient_checkpointing True
+	--base_model $path_to_vicuna_with_tokenizer \
+	--data_path $path_to_gpt4tools_71k.json \
+	--deepspeed "scripts/zero2.json" \
+	--output_dir output/gpt4tools \
+	--num_epochs 6 \
+	--per_device_train_batch_size 1 \
+	--per_device_eval_batch_size 4 \
+	--gradient_accumulation_steps 16 \
+	--model_max_length 2048 \
+	--lora_target_modules '[q_proj,k_proj,v_proj,o_proj]' \
+	--lora_r 16 \
+	--learning_rate 3e-4 \
+	--lazy_preprocess True \
+	--cache_dir $your_cache_dir \
+	--report_to 'tensorboard' \
+	--gradient_checkpointing True
 ```
 You can also use ```scripts/finetune_lora.sh```
 
