@@ -5,7 +5,7 @@ ANN_PATH=$4
 SAVE_NAME=$5
 
 for IDX in {0..7}; do
-    CUDA_VISIBLE_DEVICES=$IDX python3 inference.py \
+    CUDA_VISIBLE_DEVICES=$IDX python3 eval/inference.py \
         --base_model $BASE_MODEL \
         --lora_model $LORA_MODEL \
         --ann_path $ANN_PATH \
@@ -19,4 +19,4 @@ wait
 
 echo "Evaluating..."
 
-python3 evaluate_result.py --ann_path $ANN_PATH --save_name $SAVE_NAME --num-chunks $CHUNKS
+python3 eval/evaluate_result.py --ann_path $ANN_PATH --save_name $SAVE_NAME --num-chunks $CHUNKS
