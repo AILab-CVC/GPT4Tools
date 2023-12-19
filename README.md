@@ -51,7 +51,7 @@ We provide some selected examples using GPT4Tools in this section. More examples
 
 * ```gpt4tools_test_unseen.json``` cleaned instruction data used for testing, including instructions related to some tools that are absented in ```gpt4tools_71k.json```.
 
-Additional information about the data can be located [here](./asserts/docs/data.md).
+[data.md](./asserts/docs/data.md) shows how to generate, format and clean the data.
 
 
 ## Models
@@ -107,7 +107,7 @@ python3 scripts/download.py \
 ```
 
 ### Serving with Web GUI 
-Following [demo.sh](./scripts/demo.sh) or the below code to make a gradio interface on your own devices:
+Following [scripts/demo.sh](./scripts/demo.sh) or the below code to make a gradio interface on your own devices:
 ```
 # Advice for 1 GPU
 python gpt4tools_demo.py \
@@ -135,8 +135,7 @@ python gpt4tools_demo.py \
 You can customize the used tools by specifying ```{tools_name}_{devices}``` after args ```--load``` of ```gpt4tools_demo.py```. ```tools_name``` is illustrated in [tools.md](./docs/tools.md).
 
 ### Finetuning
-Put the ```gpt4tools_71k.json``` to ```./datasets``` and run the below code.
-
+After downloading the ```gpt4tools_71k.json``` to ```./datasets```, you can follow [scripts/finetune_lora.sh](scripts/finetune_lora.sh) or run the below code to finetune your model:
 ```
 deepspeed train.py \
 	--base_model $path_to_vicuna_with_tokenizer \
@@ -156,7 +155,6 @@ deepspeed train.py \
 	--report_to 'tensorboard' \
 	--gradient_checkpointing True
 ```
-You can also use ```scripts/finetune_lora.sh```
 
 | Hyperparameter | Global Batch Size | Learning rate | Max length | Weight decay | LoRA attention dimension (lora_r) | LoRA scaling alpha(lora_alpha) | LoRA dropout (lora_dropout) | Modules to apply LoRA (lora_target_modules)      |
 |:--------------:|:-----------------:|:-------------:|:----------:|:------------:|:---------------------------------:|:----------:|:------------:|:-----------------------------:|
