@@ -31,14 +31,14 @@ During generation using GPT-3.5, the openai api_key should be set in the env (OP
 
 * Raw Data Generation
 ```
-python3 scripts/get_instruction.py \
+python3 gpt4tools/data/get_instruction.py \
         --caption-path <your_caption_data_path> \
 	    --instruction-path <instruction_data_path> 
 ```
 
 * Cleaning, and Instructional Data Consutruction
 ```
-python3 scripts/generate_annoations.py \
+python3 gpt4tools/data/generate_annoations.py \
         --input-path <instruction_data_path> \
         --output-path <annotations_path> \
 	    --caption-path <your_caption_data_path> \
